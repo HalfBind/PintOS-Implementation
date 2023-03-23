@@ -93,6 +93,13 @@ timer_sleep (int64_t ticks)
 
   ASSERT (intr_get_level () == INTR_ON);
   while (timer_elapsed (start) < ticks) 
+  /*
+    TODO do not awake thread, and if thread's wakeup timing is done then awake it.
+    TODO 1. add thread's member time_to_wake
+    TODO 2. implement ready list which is sorted by time_to_wake
+    TODO 3. implement checking ready list's head thread's time_to_wake 
+  */
+  
     thread_yield ();
 }
 
