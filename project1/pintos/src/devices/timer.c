@@ -96,8 +96,9 @@ timer_sleep (int64_t ticks)
   /*
     TODO do not awake thread, and if thread's wakeup timing is done then awake it.
     TODO 1. add thread's member time_to_wake
-    TODO 2. implement ready list which is sorted by time_to_wake
-    TODO 3. implement checking ready list's head thread's time_to_wake 
+    TODO 2. make thread sleep
+    TODO 3. implement sleep list sorted by time_to_awake
+    TODO 4. implement checking sleep list's head thread's time_to_wake 
   */
   
     thread_yield ();
