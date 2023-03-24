@@ -8,10 +8,11 @@
 /* States in a thread's life cycle. */
 enum thread_status
   {
-    THREAD_RUNNING,     /* Running thread. */
-    THREAD_READY,       /* Not running but ready to run. */
-    THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING        /* About to be destroyed. */
+    THREAD_RUNNING,       /* Running thread. */
+    THREAD_READY,         /* Not running but ready to run. */
+    THREAD_BLOCKED,       /* Waiting for an event to trigger. */
+    THREAD_DYING,         /* About to be destroyed. */
+    THREAD_TIMED_WAITING  /* Waiting for a specipic time. */
   };
 
 /* Thread identifier type.
@@ -89,6 +90,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    int time_to_awake;                  /* store when to awaken in ticks. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
