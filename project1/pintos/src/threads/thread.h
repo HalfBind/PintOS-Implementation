@@ -12,7 +12,6 @@ enum thread_status
     THREAD_READY,         /* Not running but ready to run. */
     THREAD_BLOCKED,       /* Waiting for an event to trigger. */
     THREAD_DYING,         /* About to be destroyed. */
-    THREAD_TIMED_WAITING  /* Waiting for a specipic time. */
   };
 
 /* Thread identifier type.
@@ -139,5 +138,15 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+  
+bool less_time_to_be_activate (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
+
+void thread_sleep (int time_to_activate);
+void thread_wake_up ();
+struct thread *first_thread_of_timed_waiting ();
+struct thread *timed_waiting_list_pop_front ();
 
 #endif /* threads/thread.h */
