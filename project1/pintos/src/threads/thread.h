@@ -143,6 +143,10 @@ int thread_get_load_avg (void);
 bool less_time_to_be_activate (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);
+                             
+bool less_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
 
 void thread_sleep (int time_to_activate);
 void thread_wake_up ();

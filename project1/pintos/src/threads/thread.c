@@ -250,7 +250,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, less_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -501,7 +501,10 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    {
+      list_sort(&ready_list, less_priority, NULL);
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    }
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -596,6 +599,13 @@ bool less_time_to_be_activate (const struct list_elem *a,
                              void *aux) 
 {
   return list_entry(a, struct thread, elem)->time_to_awake < list_entry(b, struct thread, elem)->time_to_awake;
+}
+
+bool less_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) 
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
 
 void thread_sleep (int time_to_activate)
