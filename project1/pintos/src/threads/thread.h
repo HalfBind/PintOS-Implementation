@@ -8,10 +8,10 @@
 /* States in a thread's life cycle. */
 enum thread_status
   {
-    THREAD_RUNNING,     /* Running thread. */
-    THREAD_READY,       /* Not running but ready to run. */
-    THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING        /* About to be destroyed. */
+    THREAD_RUNNING,       /* Running thread. */
+    THREAD_READY,         /* Not running but ready to run. */
+    THREAD_BLOCKED,       /* Waiting for an event to trigger. */
+    THREAD_DYING,         /* About to be destroyed. */
   };
 
 /* Thread identifier type.
@@ -89,6 +89,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    int time_to_awake;                  /* store when to awaken in ticks. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -137,5 +138,19 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+  
+bool less_time_to_be_activate (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
+                             
+bool less_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
+
+void thread_sleep (int time_to_activate);
+void thread_wake_up ();
+struct thread *first_thread_of_timed_waiting ();
+struct thread *timed_waiting_list_pop_front ();
 
 #endif /* threads/thread.h */

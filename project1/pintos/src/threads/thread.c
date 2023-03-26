@@ -24,6 +24,10 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of processes in THREAD_SLEEP state, that is, processes
+   that are waiting for specific time to be activated. */
+static struct list timed_waiting_list;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -91,6 +95,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&timed_waiting_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -245,7 +250,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, less_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -496,7 +501,10 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    {
+      list_sort(&ready_list, less_priority, NULL);
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    }
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -585,3 +593,62 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+  
+bool less_time_to_be_activate (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) 
+{
+  return list_entry(a, struct thread, elem)->time_to_awake < list_entry(b, struct thread, elem)->time_to_awake;
+}
+
+bool less_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) 
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
+
+void thread_sleep (int time_to_activate)
+{
+  struct thread *cur = thread_current ();
+  enum intr_level old_level;
+  
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+
+  if (cur != idle_thread) 
+  {
+    cur->time_to_awake = time_to_activate;
+    list_insert_ordered(&timed_waiting_list, &cur->elem, less_time_to_be_activate, NULL);
+    thread_block ();
+  }
+  intr_set_level (old_level);
+}
+
+void thread_wake_up ()
+{
+  if (list_empty(&timed_waiting_list))
+  {
+    return;
+  }
+  
+  while (first_thread_of_timed_waiting ()-> time_to_awake <= timer_ticks())
+  {
+    struct thread *t = list_entry(list_pop_front(&timed_waiting_list), struct thread, elem);
+    thread_unblock(t); 
+    
+    if (list_empty(&timed_waiting_list))
+    {
+      break;
+    }
+  }
+}
+
+struct thread *first_thread_of_timed_waiting () {
+  return list_entry(list_begin (&timed_waiting_list), struct thread, elem);
+}
+
+struct thread *timed_waiting_list_pop_front () {
+  return list_entry(list_pop_front(&timed_waiting_list), struct thread, elem);
+}
