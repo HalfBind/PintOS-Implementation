@@ -604,48 +604,35 @@ void thread_sleep (int time_to_activate)
   enum intr_level old_level;
   
   ASSERT (!intr_context ());
-  ASSERT(intr_get_level() == INTR_OFF);
 
   old_level = intr_disable ();
+
   if (cur != idle_thread) 
   {
     cur->time_to_awake = time_to_activate;
-    cur->status = THREAD_BLOCKED;
     list_insert_ordered(&timed_waiting_list, &cur->elem, less_time_to_be_activate, NULL);
-    schedule ();
+    thread_block ();
   }
   intr_set_level (old_level);
 }
 
 void thread_wake_up ()
 {
-  enum intr_level old_level;
-  
-  ASSERT (!intr_context ());
-
-  old_level = intr_disable ();
-
   if (list_empty(&timed_waiting_list))
   {
     return;
   }
   
-  while (first_thread_of_timed_waiting ()-> time_to_awake > timer_ticks())
+  while (first_thread_of_timed_waiting ()-> time_to_awake <= timer_ticks())
   {
+    struct thread *t = list_entry(list_pop_front(&timed_waiting_list), struct thread, elem);
+    thread_unblock(t); 
+    
     if (list_empty(&timed_waiting_list))
     {
-      return;
+      break;
     }
-
-    struct thread *t = list_entry(list_pop_front(&timed_waiting_list), struct thread, elem);
-    
-    ASSERT(is_thread(t));
-    
-    t->status = THREAD_READY;
-    list_push_back (&ready_list, &t->elem);
   }
-  
-  intr_set_level (old_level);
 }
 
 struct thread *first_thread_of_timed_waiting () {
