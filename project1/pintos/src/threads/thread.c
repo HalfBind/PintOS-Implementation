@@ -214,6 +214,12 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (!list_empty(&ready_list))
+  {
+    if (thread_current()->priority < list_entry(list_front(&ready_list), struct thread, elem)->priority)
+      thread_yield();
+  }
+
   return tid;
 }
 
