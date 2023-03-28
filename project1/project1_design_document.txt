@@ -8,9 +8,8 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Gibeom Lim <kb28@unist.ac.kr>
+Jinsu Kim <sis3141@unist.ac.kr>
 
 ---- PRELIMINARIES ----
 
@@ -30,18 +29,40 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/* List of processes in THREAD_SLEEP state, that is, processes
+   that are waiting for specific time to be activated. */
+static struct list timed_waiting_list;
+
+Added to struct thread:
+int time_to_awake /* store when to awaken in ticks. */
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
+When timer_sleep() called, the current thread is blocked and pushed into 
+timed_wait_list ordered by time_to_awake increasing order. 
+And, in every timer interrupt context, check the front of timed_wait_list's
+time_to_awake. If time_to_awake is less than current ticks, unblock thread.
+
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+
+Rather than check every blocked thread in timed_wait_list, we implemented it
+when thread pushed into list, insert by increasing order of time_to_awake and
+check the front's time_to_awake so that The number of cases to be checked has 
+been minimized.
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+At first, we attempted to check the time_to_awake value of all blocked threads 
+every time a timer interrupt occurred, but we found that only checking the first 
+value of the list was more efficient. This was because the current list remained 
+sorted, resulting in fewer operations during a timer interrupt.
 
        PRIORITY SCHEDULING
        ===================
@@ -52,10 +73,40 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/* Added in thread_create to check whether new thread's priority is highier than 
+current thread's priority and if it's true, yield the thread. */
+if (!list_empty(&ready_list))
+  {
+    if (thread_current()->priority < list_entry(list_front(&ready_list), struct thread, elem)->priority)
+      thread_yield();
+  }
+
+/* implement it to insert thread into ready_list descending order by priority */
+bool less_priority (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) 
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
+
+/* Changed ready_list push code in thread_yield() and thread_unblock(). This code make ready_list maintain sorted state. */
+list_insert_ordered (&ready_list, &cur->elem, less_priority, NULL);
+
+/* Added in thread_set_priority() to if setted priority is highier than current thread's priority, yield the thread. */
+if (thread_current ()->priority < list_entry (list_begin(&ready_list), struct thread, elem)->priority)
+{
+thread_yield ();
+}
+
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+At first, we implemented sorting the ready_list every time when call next_thread_to_run(). 
+However, we improved efficiency and maintained code consistency by inserting threads into 
+the ready_list in priority order whenever a new thread was pushed, thus eliminating 
+unnecessary operations.
 
          SURVEY QUESTIONS
          ================
