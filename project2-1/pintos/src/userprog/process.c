@@ -32,7 +32,10 @@ process_execute (const char *command_line)
   tid_t tid;
 
   char *file_name_and_arguments[] = NULL;
-  strtok_r(command_line, ' ')
+  char space = ' ';
+  strtok_r(command_line, &space, file_name_and_arguments);
+
+  char *file_name = file_name_and_arguments[0];
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
