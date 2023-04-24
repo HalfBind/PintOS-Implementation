@@ -18,6 +18,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#define DELIMITERS " \t"
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -31,11 +33,11 @@ process_execute (const char *command_line)
   char *fn_copy;
   tid_t tid;
 
-  char *file_name_and_arguments[] = NULL;
-  char space = ' ';
-  strtok_r(command_line, &space, file_name_and_arguments);
+  char *next_argument;
+  char *file_name = strtok_r(command_line, DELIMITERS, &next_argument);
 
-  char *file_name = file_name_and_arguments[0];
+  printf(file_name);
+  printf("\n");
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
