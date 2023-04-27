@@ -50,9 +50,30 @@ process_execute (const char *file_name)
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process (void *file_name_)
+start_process (void *command_line)
 {
-  char *file_name = file_name_;
+  char *cmd_line_copy = command_line;
+  char *token, *save_ptr;
+  char *file_name;
+  char *arguments[10];
+
+  int counter = 0;
+
+  for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
+    token = strtok_r (NULL, " ", &save_ptr))
+  {
+    if (counter == 0)
+    {
+      file_name = token;
+    } else {
+      arguments[counter] = token;
+    }
+    counter++;
+  }
+
+  int num_of_args = counter - 1;
+
+  //  = command_line;
   struct intr_frame if_;
   bool success;
 
