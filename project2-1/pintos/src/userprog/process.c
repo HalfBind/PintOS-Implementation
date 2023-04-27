@@ -28,16 +28,10 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *command_line)
+process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-
-  char *next_argument;
-  char *file_name = strtok_r(command_line, DELIMITERS, &next_argument);
-
-  printf(file_name);
-  printf("\n");
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -67,6 +61,8 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+  // TODO separate file name and arguments 
+  // TODO store argument in esp +n 
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
