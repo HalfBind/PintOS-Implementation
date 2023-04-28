@@ -55,25 +55,22 @@ start_process (void *command_line)
   char *cmd_line_copy = command_line;
   char *token, *save_ptr;
   char *file_name;
-  char *arguments[10];
+  char *argv[20]; // store arguments 
+  int argc; // the number of arguments
+  char **arg_pointer[20]; // store argument's pointer
 
-  int counter = 0;
-
+  // separate file name and arguments 
   for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
     token = strtok_r (NULL, " ", &save_ptr))
   {
-    if (counter == 0)
+    if (argc == 0)
     {
       file_name = token;
-    } else {
-      arguments[counter] = token;
-    }
-    counter++;
+    } 
+    argv[argc] = token;
+    argc++;
   }
 
-  int num_of_args = counter - 1;
-
-  //  = command_line;
   struct intr_frame if_;
   bool success;
 
@@ -82,9 +79,51 @@ start_process (void *command_line)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  // TODO separate file name and arguments 
-  // TODO store argument in esp +n 
+
   success = load (file_name, &if_.eip, &if_.esp);
+
+  // store argument in esp +n 
+
+  int i;
+  for (i = argc - 1; i >= 0; i--)
+  {
+    char * arg = argv[i];
+    arg_pointer[i] = if_.esp -= (strlen(arg) + 1);
+    memcpy(if_.esp, arg, strlen(arg) + 1);
+    while ((uint8_t)if_.esp % 8 > 0)
+    {
+      if_.esp--;
+      *(uint8_t *) if_.esp = 0;
+    }
+  }
+
+  if_.esp -= 8;
+  memset(if_.esp, 0, sizeof(void *));
+
+  // arguments' address
+  for (i = argc - 1; i >= 0; i--)
+  {
+    if_.esp -= 8;
+    memset(if_.esp, &arg_pointer[i], sizeof(char**));
+  }
+
+  if_.edi = argc; 
+  if_.esi = if_.esp;
+
+  // fake return address
+  if_.esp = if_.esp - 8;
+	memset(if_.esp, 0, sizeof(void *));
+
+  printf("============Stack pointer============\n");
+  // printf(if_.esp + '\n');
+  // for (i = argc; i >= 0; i--)
+  // {
+  //   printf("esp+%d ", i);
+  //   hex_dump(16, if_.esp+ i * 4, 16, true);
+  // }
+  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+  printf("=====================================\n");
+
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
