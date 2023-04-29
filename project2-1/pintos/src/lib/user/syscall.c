@@ -1,4 +1,5 @@
 #include <syscall.h>
+#include "lib/kernel/stdio.h"
 #include "../syscall-nr.h"
 
 /* Invokes syscall NUMBER, passing no arguments, and returns the
@@ -120,6 +121,10 @@ read (int fd, void *buffer, unsigned size)
 int
 write (int fd, const void *buffer, unsigned size)
 {
+  if (fd == 1) {
+    putbuf (buffer, size);
+    return size;
+  }
   return syscall3 (SYS_WRITE, fd, buffer, size);
 }
 
