@@ -52,44 +52,62 @@ process_execute (const char *file_name)
   return tid;
 }
 
-void push_args_in_stack (int argc, struct argument argv[], struct intr_frame if_)
+void push_args_in_stack (int argc, char* argv[], struct intr_frame if_)
 {
-  int i;
+
+  char* argv_addrs[64]; //array for store stack address for argv
+  char* argv_temp_ptr; //to store argv list address
+  int i, cur_argv_len;
+
+  //argv values
   for (i = argc - 1; i >= 0; i--)
   {
-    char *arg_text = argv[i].text;
-    argv[i].address = if_.esp -= (strlen(arg_text) + 1);
-    memcpy(if_.esp, arg_text, strlen(arg_text) + 1);
+    cur_argv_len = strlen(argv[i]);
+    if_.esp = if_.esp - (cur_argv_len + 1);
+    argv_addrs[i] = if_.esp;
+    strlcpy(if_.esp, argv[i], cur_argv_len + 1);
+    // hex_dump(if_.esp, if_.esp, 64, true);
   }
 
-  // word-align
-  while ((uint8_t)if_.esp % 4 > 0)
+  //word-align
+   while ((uint8_t)if_.esp % 4 > 0)
   {
     if_.esp--;
     *(uint8_t *) if_.esp = 0;
   }
 
-  // address of argv[argc]
-  if_.esp -= 4;
-  memset(if_.esp, 0, sizeof(char *));
+  //address of argv[argc]
+  if_.esp -= sizeof(char*);
+  memset(if_.esp ,0 , sizeof(char*));
 
-  // arguments' address
-  for (i = argc - 1; i >= 0; i--)
+
+  //argv's address
+  for (i = argc -1; i>=0; i--)
   {
-    if_.esp -= 4;
-    memcpy(if_.esp, &(argv[i].address), sizeof(char*));
+    if_.esp -= sizeof(char *);
+    memcpy(if_.esp, &argv_addrs[i], sizeof(char*));
+    if(i==0) {
+      argv_temp_ptr = if_.esp;
+    }
   }
 
-  // TODO save argments array's address
-  // if_.esp -= 4;
-  // memcpy(if_.esp, argv[i], sizeof(char**));
+  //argv array's address
+  if_.esp -= sizeof(char**);
+  memcpy(if_.esp, &argv_temp_ptr, sizeof(char**));
 
-  if_.edi = argc; 
-  if_.esi = if_.esp;
+  //argc value
+  if_.esp -= sizeof(int);
+  *(uint8_t *) if_.esp = argc;
+
 
   // fake return address
+  
   if_.esp = if_.esp - 4;
 	memset(if_.esp, 0, sizeof(void *));
+  // printf("🔖🔖🔖final memestate %d\n", argc );
+  // hex_dump(if_.esp, if_.esp, 64, true);
+
+
 }
 
 /* A thread function that loads a user process and starts it
@@ -98,22 +116,16 @@ static void
 start_process (void *command_line)
 {
   char *cmd_line_copy = command_line;
-  char *token, *save_ptr;
-  char *file_name = command_line;
-  // char *argv[20]; 
-  struct argument argv[20]; // store arguments 
-  int argc = 0; // the number of arguments
-  char **arg_pointer[20]; // store argument's pointer
-
-  // separate file name and arguments 
-  for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
+  char *token, *args_command_line, *save_ptr;
+  char *file_name = strtok_r(command_line, " ", &args_command_line);
+  
+  int argc = 0;
+  char *argv[64]; // store argument's pointer
+  char *temp_arg;
+   for (token = strtok_r (args_command_line, " ", &save_ptr); token != NULL;
     token = strtok_r (NULL, " ", &save_ptr))
   {
-    if (argc == 0)
-    {
-      file_name = token;
-    } 
-    argv[argc].text = token;
+    argv[argc] = token;
     argc++;
   }
 
@@ -128,8 +140,10 @@ start_process (void *command_line)
   
   success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
   
+  if(success) {
   push_args_in_stack(argc, argv, if_);
 
+  }
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -157,6 +171,8 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //temp loop for test
+  while(1) {}
   return -1;
 }
 
