@@ -54,9 +54,9 @@ start_process (void *command_line)
 {
   char *cmd_line_copy = command_line;
   char *token, *save_ptr;
-  char *file_name;
+  char *file_name = command_line;
   char *argv[20]; // store arguments 
-  int argc; // the number of arguments
+  int argc = 0; // the number of arguments
   char **arg_pointer[20]; // store argument's pointer
 
   // separate file name and arguments 
@@ -79,9 +79,9 @@ start_process (void *command_line)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-
-  success = load (file_name, &if_.eip, &if_.esp);
-
+  
+  success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
+  
   // store argument in esp +n 
 
   int i;
@@ -104,7 +104,7 @@ start_process (void *command_line)
   for (i = argc - 1; i >= 0; i--)
   {
     if_.esp -= 8;
-    memset(if_.esp, &arg_pointer[i], sizeof(char**));
+    memcpy(if_.esp, &arg_pointer[i], sizeof(char**));
   }
 
   if_.edi = argc; 
@@ -113,17 +113,6 @@ start_process (void *command_line)
   // fake return address
   if_.esp = if_.esp - 8;
 	memset(if_.esp, 0, sizeof(void *));
-
-  printf("============Stack pointer============\n");
-  // printf(if_.esp + '\n');
-  // for (i = argc; i >= 0; i--)
-  // {
-  //   printf("esp+%d ", i);
-  //   hex_dump(16, if_.esp+ i * 4, 16, true);
-  // }
-  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
-  printf("=====================================\n");
-
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
