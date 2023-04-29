@@ -61,7 +61,12 @@ lookup_page (uint32_t *pd, const void *vaddr, bool create)
   ASSERT (pd != NULL);
 
   /* Shouldn't create new kernel virtual mappings. */
-  ASSERT (!create || (is_user_vaddr (vaddr) && vaddr != NULL));
+  ASSERT (
+    !create 
+    || (is_user_vaddr (vaddr) 
+      && vaddr != NULL 
+      && pagedir_get_page(pd, vaddr) != NULL)
+  );
 
   /* Check for a page table for VADDR.
      If one is missing, create one if requested. */
