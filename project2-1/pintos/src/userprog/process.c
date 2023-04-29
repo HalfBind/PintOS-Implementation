@@ -23,6 +23,11 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+struct argument {
+  char *text;
+  char **address;
+};
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -47,6 +52,46 @@ process_execute (const char *file_name)
   return tid;
 }
 
+void push_args_in_stack (int argc, struct argument argv[], struct intr_frame if_)
+{
+  int i;
+  for (i = argc - 1; i >= 0; i--)
+  {
+    char *arg_text = argv[i].text;
+    argv[i].address = if_.esp -= (strlen(arg_text) + 1);
+    memcpy(if_.esp, arg_text, strlen(arg_text) + 1);
+  }
+
+  // word-align
+  while ((uint8_t)if_.esp % 4 > 0)
+  {
+    if_.esp--;
+    *(uint8_t *) if_.esp = 0;
+  }
+
+  // address of argv[argc]
+  if_.esp -= 4;
+  memset(if_.esp, 0, sizeof(char *));
+
+  // arguments' address
+  for (i = argc - 1; i >= 0; i--)
+  {
+    if_.esp -= 4;
+    memcpy(if_.esp, &(argv[i].address), sizeof(char*));
+  }
+
+  // TODO save argments array's address
+  // if_.esp -= 4;
+  // memcpy(if_.esp, argv[i], sizeof(char**));
+
+  if_.edi = argc; 
+  if_.esi = if_.esp;
+
+  // fake return address
+  if_.esp = if_.esp - 4;
+	memset(if_.esp, 0, sizeof(void *));
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -55,7 +100,8 @@ start_process (void *command_line)
   char *cmd_line_copy = command_line;
   char *token, *save_ptr;
   char *file_name = command_line;
-  char *argv[20]; // store arguments 
+  // char *argv[20]; 
+  struct argument argv[20]; // store arguments 
   int argc = 0; // the number of arguments
   char **arg_pointer[20]; // store argument's pointer
 
@@ -67,7 +113,7 @@ start_process (void *command_line)
     {
       file_name = token;
     } 
-    argv[argc] = token;
+    argv[argc].text = token;
     argc++;
   }
 
@@ -82,37 +128,7 @@ start_process (void *command_line)
   
   success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
   
-  // store argument in esp +n 
-
-  int i;
-  for (i = argc - 1; i >= 0; i--)
-  {
-    char * arg = argv[i];
-    arg_pointer[i] = if_.esp -= (strlen(arg) + 1);
-    memcpy(if_.esp, arg, strlen(arg) + 1);
-    while ((uint8_t)if_.esp % 8 > 0)
-    {
-      if_.esp--;
-      *(uint8_t *) if_.esp = 0;
-    }
-  }
-
-  if_.esp -= 8;
-  memset(if_.esp, 0, sizeof(void *));
-
-  // arguments' address
-  for (i = argc - 1; i >= 0; i--)
-  {
-    if_.esp -= 8;
-    memcpy(if_.esp, &arg_pointer[i], sizeof(char**));
-  }
-
-  if_.edi = argc; 
-  if_.esi = if_.esp;
-
-  // fake return address
-  if_.esp = if_.esp - 8;
-	memset(if_.esp, 0, sizeof(void *));
+  push_args_in_stack(argc, argv, if_);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
