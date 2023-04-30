@@ -28,6 +28,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   switch (system_call_number)
   {
+    case SYS_HALT:
+    {
+      halt();
+      break;
+    }
+
     case SYS_EXIT:
     {
       int status = *((int *) get_argument(f->esp, 1));
@@ -41,11 +47,12 @@ syscall_handler (struct intr_frame *f UNUSED)
       void *buffer = *((void **) get_argument(f->esp, 6));
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
       write(fd, buffer, size);
+      break;
     }
 
     default:
     {
-      printf("Invalid system call number.");
+      printf("Invalid system call number: %d\n", system_call_number);
       exit(-1);
       break;
     }
