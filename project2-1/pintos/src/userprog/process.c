@@ -180,8 +180,9 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   // tmp loop for test
-  if (DEBUG)
+  if (DEBUG){
     while(1) {}
+  }
   return -1;
 }
 
