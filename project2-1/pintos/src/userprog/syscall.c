@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "console.h"
+#include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -43,10 +44,27 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_WRITE:
     {
+      printf("write\n");
+      printf("write\n");
+      printf("write\n");
+      printf("write\n");
+      printf("write\n");
+      printf("write\n");
       int fd = *((int *) get_argument(f->esp, 5));
       void *buffer = *((void **) get_argument(f->esp, 6));
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
       write(fd, buffer, size);
+      break;
+    }
+
+    case SYS_CREATE:
+    {
+      char *file = *(char **) get_argument(f->esp, 4);
+      unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
+
+      // TODO error handling
+      f->eax = create(file, initial_size);
+
       break;
     }
 
@@ -92,4 +110,9 @@ int write (int fd, const void *buffer, unsigned size)
   {
     putbuf(buffer, size);
   }
+}
+
+bool create (const char *file, unsigned initial_size)
+{
+  return filesys_create(file, initial_size);
 }
