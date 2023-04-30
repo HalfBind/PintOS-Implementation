@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -33,14 +34,20 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 void validate_user_vaddr (const void *vaddr) {
   if (!is_user_vaddr(vaddr))
-    exit(-1); // TODO implement
+    exit(-1);
   if (vaddr == NULL)
-    exit(-1); // TODO implement
+    exit(-1);
   if (pagedir_get_page(thread_current()->pagedir, vaddr) == NULL)
-    exit(-1); // TODO implement
+    exit(-1);
 }
 
 uint32_t get_argument(int32_t *esp, int offset) {
   validate_user_vaddr(esp + offset);
-  return *(esp + idx);
+  return *(esp + offset);
+}
+
+void exit (int status)
+{
+  printf("exit program. status: %d", status);
+  thread_exit();
 }
