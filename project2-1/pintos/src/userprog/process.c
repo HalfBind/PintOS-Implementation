@@ -54,85 +54,22 @@ process_execute (const char *file_name)
   return tid;
 }
 
-void push_args_in_stack (int argc, char* argv[], struct intr_frame if_)
-{
-
-  char* argv_addrs[64]; //array for store stack address for argv
-  char* argv_temp_ptr; //to store argv list address
-  int i, cur_argv_len, len_word_align;
-  int argv_len_sum = 0;
-
-  //argv values
-  for (i = argc - 1; i >= 0; i--)
-  {
-    cur_argv_len = strlen(argv[i]);
-    if_.esp = if_.esp - (cur_argv_len + 1);
-    argv_addrs[i] = if_.esp;
-    strlcpy(if_.esp, argv[i], cur_argv_len + 1);
-    argv_len_sum += (cur_argv_len+1);
-    // hex_dump(if_.esp, if_.esp, 64, true);
-  }
-
-  //word-align
-
-   len_word_align = 4-(argv_len_sum % 4);
-   if_.esp = if_.esp - len_word_align;
-   printf("🔖🔖🔖WORD ALIGN %d, %d\n", len_word_align, argv_len_sum );
-  hex_dump(if_.esp, if_.esp, 64, true);
-  //address of argv[argc]
-  if_.esp -= sizeof(char*);
-  memset(if_.esp ,0 , sizeof(char*));
-
-
-  //argv's address
-  for (i = argc -1; i>=0; i--)
-  {
-    if_.esp -= sizeof(char *);
-    memcpy(if_.esp, &argv_addrs[i], sizeof(char*));
-    if(i==0) {
-      argv_temp_ptr = if_.esp;
-    }
-  }
-
-  //argv array's address
-  if_.esp -= sizeof(char**);
-  memcpy(if_.esp, &argv_temp_ptr, sizeof(char**));
-  printf("🔖🔖🔖array addr %d, %p\n", argc, if_.esp );
-  hex_dump(if_.esp, if_.esp, 64, true);
-  //argc value
-  if_.esp -= sizeof(int);
-  *(uint8_t *) if_.esp = argc;
-  printf("🔖🔖🔖argc %d, %p\n", argc, if_.esp );
-  hex_dump(if_.esp, if_.esp, 64, true);
-
-  // fake return address
-  
-  if_.esp = if_.esp - 4;
-	memset(if_.esp, 0, sizeof(void *));
-  printf("🔖🔖🔖final memestate %d, %p\n", argc, if_.esp );
-  hex_dump(if_.esp, if_.esp, 64, true);
-
-
-}
-
 /* A thread function that loads a user process and starts it
    running. */
 static void
 start_process (void *command_line)
 {
   char *cmd_line_copy = command_line;
-  char *token, *save_ptr;
-  
+  char *token, *save_ptr, *file_name;
   int argc = 0;
   char *argv[64]; // store argument's pointer
-  char *temp_arg;
    for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
     token = strtok_r (NULL, " ", &save_ptr))
   {
     argv[argc] = token;
     argc++;
   }
-  char* file_name = argv[0];
+  file_name = argv[0];
 
   struct intr_frame if_;
   bool success;
@@ -146,15 +83,67 @@ start_process (void *command_line)
   success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
   
   if(success) {
-  push_args_in_stack(argc, argv, if_);
-  printf("✅arg push done\n");
+
+    char* argv_addrs[64]; //array for store stack address for argv
+    char* argv_temp_ptr; //to store argv list address
+    int i, cur_argv_len, len_word_align;
+    int argv_len_sum = 0;
+
+    //argv values
+    for (i = argc - 1; i >= 0; i--)
+    {
+      cur_argv_len = strlen(argv[i]);
+      if_.esp = if_.esp - (cur_argv_len + 1);
+      argv_addrs[i] = if_.esp;
+      strlcpy(if_.esp, argv[i], cur_argv_len + 1);
+      argv_len_sum += (cur_argv_len+1);
+      // hex_dump(if_.esp, if_.esp, 64, true);
+    }
+
+    //word-align
+
+    len_word_align = 4-(argv_len_sum % 4);
+    if_.esp = if_.esp - len_word_align;
+    // hex_dump(if_.esp, if_.esp, 64, true);
+
+    //address of argv[argc]
+    if_.esp -= sizeof(char*);
+    memset(if_.esp ,0 , sizeof(char*));
+
+
+    //argv's address
+    for (i = argc -1; i>=0; i--)
+    {
+      if_.esp -= sizeof(char *);
+      memcpy(if_.esp, &argv_addrs[i], sizeof(char*));
+      if(i==0) {
+        argv_temp_ptr = if_.esp;
+      }
+    }
+
+    //argv array's address
+    if_.esp -= sizeof(char**);
+    memcpy(if_.esp, &argv_temp_ptr, sizeof(char**));
+    // printf("🔖🔖🔖array addr %d, %p\n", argc, if_.esp );
+    // hex_dump(if_.esp, if_.esp, 64, true);
+    
+    //argc value
+    if_.esp -= sizeof(int);
+    *(uint8_t *) if_.esp = argc;
+    // printf("🔖🔖🔖argc %d, %p\n", argc, if_.esp );
+    // hex_dump(if_.esp, if_.esp, 64, true);
+
+    // fake return address
+    
+    if_.esp = if_.esp - 4;
+    memset(if_.esp, 0, sizeof(void *));
+    // printf("🔖🔖🔖final memestate %d, %p\n", argc, if_.esp );
+    // hex_dump(if_.esp, if_.esp, 64, true);
   }
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  printf("✅page free done\n");
   if (!success) 
     thread_exit ();
-  printf("✅thread exit done\n");
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
