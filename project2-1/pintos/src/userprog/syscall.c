@@ -35,6 +35,14 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     }
 
+    case SYS_WRITE:
+    {
+      int fd = *((int *) get_argument(f->esp, 5));
+      void *buffer = *((void **) get_argument(f->esp, 6));
+      unsigned size = *((unsigned *) get_argument(f->esp, 7));
+      write(fd, buffer, size);
+    }
+
     default:
     {
       printf("Invalid system call number.");
