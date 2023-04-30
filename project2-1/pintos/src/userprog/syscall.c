@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "console.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -18,30 +19,28 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   // validate address
   validate_user_vaddr (f->esp);
+  printf ("system call!\n");
 
   // system call number
   int syscall_num = (int) *((int *) f->esp);
-  
-  switch (syscall_num)
-  {
-    default:
-      break;
-  }
-
-  printf ("system call!\n");
 
   int16_t system_call_number = f->eax;
 
   switch (system_call_number)
   {
-  case SYS_WRITE:
-    write(f->edi, f->esi, f->edx);
-    break;
-  
-  default:
-    printf("Invalid system call number.");
-    // TODO error handling
-    break;
+    case SYS_EXIT:
+    {
+      int status = *((int *) get_argument(f->esp, 1));
+      exit(status);
+      break;
+    }
+
+    default:
+    {
+      printf("Invalid system call number.");
+      exit(-1);
+      break;
+    }
   }
   
   thread_exit ();
@@ -56,13 +55,21 @@ void validate_user_vaddr (const void *vaddr) {
     exit(-1);
 }
 
-uint32_t get_argument(int32_t *esp, int offset) {
+void *get_argument(void *esp, int offset) {
   validate_user_vaddr(esp + offset);
-  return *(esp + offset);
+  return esp + offset;
 }
 
 void exit (int status)
 {
   printf("exit program. status: %d", status);
   thread_exit();
+}
+
+int write (int fd, const void *buffer, unsigned size)
+{
+  if (fd == 1)
+  {
+    putbuf(buffer, size);
+  }
 }
