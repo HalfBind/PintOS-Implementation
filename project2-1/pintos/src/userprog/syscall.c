@@ -64,8 +64,13 @@ void validate_user_vaddr (const void *vaddr) {
 }
 
 void *get_argument(void *esp, int offset) {
-  validate_user_vaddr(esp + offset);
-  return esp + offset;
+  validate_user_vaddr(esp + 4 * offset);
+  return esp + 4 * offset;
+}
+
+void halt (void)
+{
+  shutdown_power_off();
 }
 
 void exit (int status)
