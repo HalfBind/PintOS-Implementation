@@ -42,5 +42,5 @@ void validate_user_vaddr (const void *vaddr) {
 
 uint32_t get_argument(int32_t *esp, int offset) {
   validate_user_vaddr(esp + offset);
-  return *(esp + idx);
+  return *(esp + offset);
 }
