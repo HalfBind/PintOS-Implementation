@@ -18,15 +18,22 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#define DELIMITERS " \t"
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
+struct argument {
+  char *text;
+  char **address;
+};
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t
-process_execute (const char *file_name) 
+process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
@@ -45,12 +52,91 @@ process_execute (const char *file_name)
   return tid;
 }
 
+void push_args_in_stack (int argc, char* argv[], struct intr_frame if_)
+{
+
+  char* argv_addrs[64]; // array for store stack address for argv
+  char* argv_temp_ptr; // to store argv list address
+  int i, cur_argv_len;
+
+  // argv values
+  for (i = argc - 1; i >= 0; i--)
+  {
+    cur_argv_len = strlen(argv[i]);
+    if_.esp = if_.esp - (cur_argv_len + 1);
+    argv_addrs[i] = if_.esp;
+    strlcpy(if_.esp, argv[i], cur_argv_len + 1);
+    printf("%d: ", i);
+    printf(argv[i]);
+    printf("\n");
+    if (DEBUG) {
+      printf("hit\n");
+      hex_dump(if_.esp, if_.esp, 64, true);
+    }
+  }
+
+  // word-align
+   while ((uint8_t)if_.esp % 4 > 0)
+  {
+    if_.esp--;
+    *(uint8_t *) if_.esp = 0;
+  }
+
+  // address of argv[argc]
+  if_.esp -= sizeof(char*);
+  memset(if_.esp ,0 , sizeof(char*));
+
+
+  // argv's address
+  for (i = argc - 1; i >= 0; i--)
+  {
+    if_.esp -= sizeof(char *);
+    memcpy(if_.esp, &argv_addrs[i], sizeof(char*));
+    if(i==0) {
+      argv_temp_ptr = if_.esp;
+    }
+  }
+
+  // argv array's address
+  if_.esp -= sizeof(char**);
+  memcpy(if_.esp, &argv_temp_ptr, sizeof(char**));
+
+  // argc value
+  if_.esp -= sizeof(int);
+  *(uint8_t *) if_.esp = argc;
+
+
+  // return address
+  if_.esp = if_.esp - 4;
+	memset(if_.esp, 0, sizeof(void *));
+  if (DEBUG) {
+      printf("🔖🔖🔖final memestate %d\n", argc );
+      hex_dump(if_.esp, if_.esp, 64, true);
+  }
+
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process (void *file_name_)
+start_process (void *command_line)
 {
-  char *file_name = file_name_;
+  char *cmd_line_copy = command_line;
+  char *token, *save_ptr;
+  char *file_name;
+  
+  int argc = 0;
+  char *argv[64]; // store argument's pointer
+  char *temp_arg;
+  for (token = strtok_r (command_line, " ", &save_ptr); token != NULL;
+    token = strtok_r (NULL, " ", &save_ptr))
+  {
+    argv[argc] = token;
+    argc++;
+  }
+
+  file_name = argv[0];
+
   struct intr_frame if_;
   bool success;
 
@@ -59,7 +145,12 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  
+  success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
+  
+  if(success) {
+    push_args_in_stack(argc, argv, if_);
+  }
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -88,6 +179,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // tmp loop for test
+  if (DEBUG){
+    while(1) {}
+  }
   return -1;
 }
 
