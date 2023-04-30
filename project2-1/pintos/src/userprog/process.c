@@ -71,6 +71,8 @@ start_process (void *command_line)
   }
   file_name = argv[0];
 
+  file_name = argv[0];
+
   struct intr_frame if_;
   bool success;
 
@@ -140,6 +142,7 @@ start_process (void *command_line)
     // printf("🔖🔖🔖final memestate %d, %p\n", argc, if_.esp );
     // hex_dump(if_.esp, if_.esp, 64, true);
   }
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -166,8 +169,10 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  //temp loop for test
-  while(1) {}
+  // tmp loop for test
+  if (DEBUG){
+    while(1) {}
+  }
   return -1;
 }
 
