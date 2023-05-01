@@ -47,10 +47,12 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  printf("✅thread created\n");
+  if (DEBUG)
+    printf("✅thread created\n");
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  printf("✅page alloc freed\n"); 
+  if (DEBUG)
+    printf("✅page alloc freed\n"); 
   return tid;
 }
 
@@ -181,10 +183,13 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // tmp loop for test
-  if (DEBUG){
-    while(1) {}
-  }
+  // if (DEBUG)
+  // {
+    int count = 5000000;
+    while (count--)
+    {
+    }
+  // }
   return -1;
 }
 

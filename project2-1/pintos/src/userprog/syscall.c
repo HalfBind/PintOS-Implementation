@@ -6,6 +6,7 @@
 #include "threads/vaddr.h"
 #include "console.h"
 #include "filesys/filesys.h"
+#define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
 
@@ -24,7 +25,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   // system call number
   int syscall_num = (int) *((int *) f->esp);
 
-  printf ("system call: %d\n", syscall_num);
+  if (DEBUG)
+    printf ("system call: %d\n", syscall_num);
 
   switch (syscall_num)
   {
@@ -36,7 +38,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-      int status = *((int *) get_argument(f->esp, 1));
+      int status;
+      status = *((int *) get_argument(f->esp, 1));
       exit(status);
       break;
     }
@@ -107,7 +110,9 @@ void halt (void)
 
 void exit (int status)
 {
-  printf("exit program. status: %d", status);
+  if (DEBUG)
+    printf("exit program. status: %d\n", status);
+  printf("%s: exit(%d)", thread_name(), status);
   thread_exit();
 }
 
