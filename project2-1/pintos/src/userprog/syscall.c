@@ -153,8 +153,6 @@ bool create (const char *file, unsigned initial_size)
   return filesys_create(file, initial_size);
 }
 
-static int fd_counter = 2;
-
 int open (const char *file)
 {
   struct file * cur_file;
@@ -170,7 +168,7 @@ int open (const char *file)
       return i;
     }
   }
-  exit(-1) // file descriptor is full
+  exit(-1); // file descriptor is full
 }
 
 void close (int fd)
