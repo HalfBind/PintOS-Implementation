@@ -10,6 +10,9 @@
 
 static void syscall_handler (struct intr_frame *);
 
+bool create (const char *file, unsigned initial_size);
+int open(const char *file);
+
 void
 syscall_init (void) 
 {
@@ -63,15 +66,33 @@ syscall_handler (struct intr_frame *f UNUSED)
       char *file = *(char **) get_argument(f->esp, 4);
       unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
 
+      // case of null file
+      if (file == NULL)
+        exit(-1);
+
+      // case of bad pointer
+      validate_user_vaddr(file);
+
       // TODO error handling
-      // f->eax = create(file, initial_size);
+      f->eax = create(file, initial_size);
 
       break;
     }
 
     case SYS_OPEN:
     {
+      char **file_address = get_argument(f->esp, 1);
+      validate_user_vaddr(*file_address);
+      char *file = *file_address;
 
+      if (file == NULL)
+        exit(-1);
+
+      // validate_user_vaddr(file);
+
+      int fd = open(file);
+      f->eax = fd;
+      break;
     }
 
     case SYS_CLOSE:
@@ -129,9 +150,12 @@ bool create (const char *file, unsigned initial_size)
   return filesys_create(file, initial_size);
 }
 
+static int fd_counter = 2;
+
 int open (const char *file)
 {
-  filesys_open(file);
+  struct thread *cur_t = thread_current();
+  return (filesys_open(file) == NULL ? -1 : fd_counter++);
 }
 
 void close (int fd)
