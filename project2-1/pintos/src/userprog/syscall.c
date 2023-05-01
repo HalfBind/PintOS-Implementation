@@ -9,6 +9,8 @@
 #define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
+bool create (const char *, unsigned );
+int open (const char *);
 
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
@@ -73,7 +75,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       // case of bad pointer
       validate_user_vaddr(file);
 
-      // TODO error handling
       f->eax = create(file, initial_size);
 
       break;
@@ -92,6 +93,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       int fd = open(file);
       f->eax = fd;
+
       break;
     }
 
@@ -133,6 +135,7 @@ void exit (int status)
   if (DEBUG)
     printf("exit program. status: %d\n", status);
   printf("%s: exit(%d)\n", thread_name(), status);
+
   thread_exit();
 }
 
@@ -154,8 +157,20 @@ static int fd_counter = 2;
 
 int open (const char *file)
 {
-  struct thread *cur_t = thread_current();
-  return (filesys_open(file) == NULL ? -1 : fd_counter++);
+  struct file * cur_file;
+  int i; 
+  cur_file = filesys_open(file);
+  if (cur_file == NULL) {
+    return -1;
+  }
+  for (i = 3; i < 128; i++) {
+    if (thread_current()->file_descriptor[i] == NULL) 
+    {
+      thread_current()->file_descriptor[i] = cur_file;
+      return i;
+    }
+  }
+  exit(-1) // file descriptor is full
 }
 
 void close (int fd)
