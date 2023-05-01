@@ -599,6 +599,6 @@ struct thread *get_thread(tid_t thread_id)
     if (cur->tid == thread_id)
       return cur;
   }
-  return NULL:
+  return NULL;
 
 }
