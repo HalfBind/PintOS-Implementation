@@ -99,7 +99,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_CLOSE:
     {
-
+       int fd = *((int *) get_argument(f->esp, 1));
+       close(fd);
+       break;
     }
 
     default:
@@ -173,5 +175,11 @@ int open (const char *file)
 
 void close (int fd)
 {
-  
+  struct file* target_file;
+  target_file = thread_current()->file_descriptor[fd];
+  if(target_file == NULL) {
+    exit(-1);
+  } else {
+    target_file = NULL;
+  }
 }

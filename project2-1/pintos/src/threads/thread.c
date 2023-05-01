@@ -291,6 +291,10 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+  int i;
+  for(i=0;i<128;i++) {
+    thread_current()->file_descriptor[i] = NULL;
+  }
   process_exit ();
 #endif
 
