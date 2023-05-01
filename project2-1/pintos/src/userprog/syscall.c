@@ -20,14 +20,13 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
   // validate address
   validate_user_vaddr (f->esp);
-  printf ("system call!\n");
 
   // system call number
   int syscall_num = (int) *((int *) f->esp);
 
-  int16_t system_call_number = f->eax;
+  printf ("system call: %d\n", syscall_num);
 
-  switch (system_call_number)
+  switch (syscall_num)
   {
     case SYS_HALT:
     {
@@ -44,16 +43,16 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_WRITE:
     {
-      printf("write\n");
-      printf("write\n");
-      printf("write\n");
-      printf("write\n");
-      printf("write\n");
-      printf("write\n");
       int fd = *((int *) get_argument(f->esp, 5));
-      void *buffer = *((void **) get_argument(f->esp, 6));
+      // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
+
+      uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
+      validate_user_vaddr(buffer_ptr);
+
+      void *buffer = *buffer_ptr;
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
-      write(fd, buffer, size);
+
+      f->eax = write(fd, buffer, size);
       break;
     }
 
@@ -63,20 +62,28 @@ syscall_handler (struct intr_frame *f UNUSED)
       unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
 
       // TODO error handling
-      f->eax = create(file, initial_size);
+      // f->eax = create(file, initial_size);
 
       break;
+    }
+
+    case SYS_OPEN:
+    {
+
+    }
+
+    case SYS_CLOSE:
+    {
+
     }
 
     default:
     {
-      printf("Invalid system call number: %d\n", system_call_number);
+      printf("Invalid system call number: %d\n", syscall_num);
       exit(-1);
       break;
     }
   }
-  
-  thread_exit ();
 }
 
 void validate_user_vaddr (const void *vaddr) {
@@ -109,10 +116,21 @@ int write (int fd, const void *buffer, unsigned size)
   if (fd == 1)
   {
     putbuf(buffer, size);
+    return size;
   }
 }
 
 bool create (const char *file, unsigned initial_size)
 {
   return filesys_create(file, initial_size);
+}
+
+int open (const char *file)
+{
+  filesys_open(file);
+}
+
+void close (int fd)
+{
+  
 }
