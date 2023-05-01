@@ -50,12 +50,14 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+
   if (DEBUG)
     printf("✅thread created\n");
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   if (DEBUG)
     printf("✅page alloc freed\n"); 
+
   return tid;
 }
 
@@ -105,7 +107,7 @@ start_process (void *command_line)
       argv_len_sum += (cur_argv_len + 1);
       if (DEBUG)
       {
-        hex_dump(if_.esp, if_.esp, 64, true);
+        // hex_dump(if_.esp, if_.esp, 64, true);
       }
     }
 
@@ -114,7 +116,7 @@ start_process (void *command_line)
     if_.esp = if_.esp - len_word_align;
     if (DEBUG) 
     {
-      hex_dump(if_.esp, if_.esp, 64, true);
+      // hex_dump(if_.esp, if_.esp, 64, true);
     }
 
     // address of argv[argc]
@@ -137,8 +139,8 @@ start_process (void *command_line)
     memcpy(if_.esp, &argv_temp_ptr, sizeof(char**));
     if (DEBUG)
     {
-      printf("🔖🔖🔖array addr %d, %p\n", argc, if_.esp );
-      hex_dump(if_.esp, if_.esp, 64, true);
+      // printf("🔖🔖🔖array addr %d, %p\n", argc, if_.esp );
+      // hex_dump(if_.esp, if_.esp, 64, true);
     }
     
     // argc value
@@ -146,8 +148,8 @@ start_process (void *command_line)
     *(uint8_t *) if_.esp = argc;
     if (DEBUG)
     {
-      printf("🔖🔖🔖argc %d, %p\n", argc, if_.esp );
-      hex_dump(if_.esp, if_.esp, 64, true);
+      // printf("🔖🔖🔖argc %d, %p\n", argc, if_.esp );
+      // hex_dump(if_.esp, if_.esp, 64, true);
     }
 
     // return address
@@ -155,8 +157,8 @@ start_process (void *command_line)
     memset(if_.esp, 0, sizeof(void *));
     if (DEBUG)
     {
-      printf("🔖🔖🔖final memestate %d, %p\n", argc, if_.esp );
-      hex_dump(if_.esp, if_.esp, 64, true);  
+      // printf("🔖🔖🔖final memestate %d, %p\n", argc, if_.esp );
+      // hex_dump(if_.esp, if_.esp, 64, true);  
     }
   }
 
@@ -186,20 +188,14 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-    int count = 5000000;
-    while (count--)
-    {
-    }
-  // struct thread *child = get_thread(child_tid);
-  // if (child == NULL)
-  //   return -1;
+  // tmp loop for test
 
-  // TODO wait child terminate
-
-  // if (child->exit_status != 0)
-  //   return -1;
-
-  // return child->exit_status;
+    // while(1) {}
+  
+  int i = 0;
+  while(i < 5000000) {
+    i++;
+  }
   return -1;
 }
 

@@ -9,6 +9,11 @@
 #define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
+bool create (const char *, unsigned );
+int open (const char *);
+
+bool create (const char *file, unsigned initial_size);
+int open(const char *file);
 
 void
 syscall_init (void) 
@@ -63,15 +68,33 @@ syscall_handler (struct intr_frame *f UNUSED)
       char *file = *(char **) get_argument(f->esp, 4);
       unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
 
-      // TODO error handling
-      // f->eax = create(file, initial_size);
+      // case of null file
+      if (file == NULL)
+        exit(-1);
+
+      // case of bad pointer
+      validate_user_vaddr(file);
+
+      f->eax = create(file, initial_size);
 
       break;
     }
 
     case SYS_OPEN:
     {
+      char **file_address = get_argument(f->esp, 1);
+      validate_user_vaddr(*file_address);
+      char *file = *file_address;
 
+      if (file == NULL)
+        exit(-1);
+
+      // validate_user_vaddr(file);
+
+      int fd = open(file);
+      f->eax = fd;
+
+      break;
     }
 
     case SYS_CLOSE:
@@ -112,6 +135,7 @@ void exit (int status)
   if (DEBUG)
     printf("exit program. status: %d\n", status);
   printf("%s: exit(%d)\n", thread_name(), status);
+
   thread_exit();
 }
 
@@ -131,7 +155,20 @@ bool create (const char *file, unsigned initial_size)
 
 int open (const char *file)
 {
-  filesys_open(file);
+  struct file * cur_file;
+  int i; 
+  cur_file = filesys_open(file);
+  if (cur_file == NULL) {
+    return -1;
+  }
+  for (i = 3; i < 128; i++) {
+    if (thread_current()->file_descriptor[i] == NULL) 
+    {
+      thread_current()->file_descriptor[i] = cur_file;
+      return i;
+    }
+  }
+  exit(-1); // file descriptor is full
 }
 
 void close (int fd)
