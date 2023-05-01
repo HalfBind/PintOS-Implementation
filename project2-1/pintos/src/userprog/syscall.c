@@ -38,8 +38,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
     {
-      int status;
-      status = *((int *) get_argument(f->esp, 1));
+      int status = (int) (*(uint32_t *)get_argument(f->esp, 1));
       exit(status);
       break;
     }
@@ -112,7 +111,7 @@ void exit (int status)
 {
   if (DEBUG)
     printf("exit program. status: %d\n", status);
-  printf("%s: exit(%d)", thread_name(), status);
+  printf("%s: exit(%d)\n", thread_name(), status);
   thread_exit();
 }
 
