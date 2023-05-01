@@ -68,7 +68,7 @@ start_process (void *command_line)
   char *token, *save_ptr, *file_name;
   int argc = 0;
   char *argv[64]; // store argument's pointer
-   for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
+  for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
     token = strtok_r (NULL, " ", &save_ptr))
   {
     argv[argc] = token;
@@ -186,13 +186,20 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // if (DEBUG)
-  // {
     int count = 5000000;
     while (count--)
     {
     }
-  // }
+  // struct thread *child = get_thread(child_tid);
+  // if (child == NULL)
+  //   return -1;
+
+  // TODO wait child terminate
+
+  // if (child->exit_status != 0)
+  //   return -1;
+
+  // return child->exit_status;
   return -1;
 }
 
