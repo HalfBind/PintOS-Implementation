@@ -8,6 +8,8 @@
 #include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
+bool create (const char *, unsigned );
+int open (const char *);
 
 void
 syscall_init (void) 
@@ -24,7 +26,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   // system call number
   int syscall_num = (int) *((int *) f->esp);
 
-  printf ("system call: %d\n", syscall_num);
+  // printf ("system call: %d\n", syscall_num);
 
   switch (syscall_num)
   {
@@ -60,16 +62,15 @@ syscall_handler (struct intr_frame *f UNUSED)
     {
       char *file = *(char **) get_argument(f->esp, 4);
       unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
-
-      // TODO error handling
-      // f->eax = create(file, initial_size);
+       f->eax = create(file, initial_size);
 
       break;
     }
 
     case SYS_OPEN:
     {
-
+      char *file = *(char **) get_argument(f->esp, 1);
+      f->eax = open(file);
     }
 
     case SYS_CLOSE:
@@ -107,7 +108,7 @@ void halt (void)
 
 void exit (int status)
 {
-  printf("exit program. status: %d", status);
+  // printf("exit program. status: %d", status);
   thread_exit();
 }
 
