@@ -123,6 +123,7 @@ write (int fd, const void *buffer, unsigned size)
   return syscall3 (SYS_WRITE, fd, buffer, size);
 }
 
+
 void
 seek (int fd, unsigned position) 
 {

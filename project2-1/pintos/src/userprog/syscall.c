@@ -4,6 +4,9 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "console.h"
+#include "filesys/filesys.h"
+#define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
 
@@ -21,15 +24,69 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   // system call number
   int syscall_num = (int) *((int *) f->esp);
-  
+
+  if (DEBUG)
+    printf ("system call: %d\n", syscall_num);
+
   switch (syscall_num)
   {
-    default:
+    case SYS_HALT:
+    {
+      halt();
       break;
-  }
+    }
 
-  printf ("system call!\n");
-  thread_exit ();
+    case SYS_EXIT:
+    {
+      int status;
+      status = *((int *) get_argument(f->esp, 1));
+      exit(status);
+      break;
+    }
+
+    case SYS_WRITE:
+    {
+      int fd = *((int *) get_argument(f->esp, 5));
+      // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
+
+      uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
+      validate_user_vaddr(buffer_ptr);
+
+      void *buffer = *buffer_ptr;
+      unsigned size = *((unsigned *) get_argument(f->esp, 7));
+
+      f->eax = write(fd, buffer, size);
+      break;
+    }
+
+    case SYS_CREATE:
+    {
+      char *file = *(char **) get_argument(f->esp, 4);
+      unsigned initial_size = *(unsigned *) get_argument(f->esp, 5);
+
+      // TODO error handling
+      // f->eax = create(file, initial_size);
+
+      break;
+    }
+
+    case SYS_OPEN:
+    {
+
+    }
+
+    case SYS_CLOSE:
+    {
+
+    }
+
+    default:
+    {
+      printf("Invalid system call number: %d\n", syscall_num);
+      exit(-1);
+      break;
+    }
+  }
 }
 
 void validate_user_vaddr (const void *vaddr) {
@@ -41,13 +98,44 @@ void validate_user_vaddr (const void *vaddr) {
     exit(-1);
 }
 
-uint32_t get_argument(int32_t *esp, int offset) {
-  validate_user_vaddr(esp + offset);
-  return *(esp + offset);
+void *get_argument(void *esp, int offset) {
+  validate_user_vaddr(esp + 4 * offset);
+  return esp + 4 * offset;
+}
+
+void halt (void)
+{
+  shutdown_power_off();
 }
 
 void exit (int status)
 {
-  printf("exit program. status: %d", status);
+  if (DEBUG)
+    printf("exit program. status: %d\n", status);
+  printf("%s: exit(%d)", thread_name(), status);
   thread_exit();
+}
+
+int write (int fd, const void *buffer, unsigned size)
+{
+  if (fd == 1)
+  {
+    putbuf(buffer, size);
+    return size;
+  }
+}
+
+bool create (const char *file, unsigned initial_size)
+{
+  return filesys_create(file, initial_size);
+}
+
+int open (const char *file)
+{
+  filesys_open(file);
+}
+
+void close (int fd)
+{
+  
 }

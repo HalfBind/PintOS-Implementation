@@ -8,6 +8,6 @@ int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
 
-static bool DEBUG = true;
+static bool DEBUG = false;
 
 #endif /* userprog/process.h */
