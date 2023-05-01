@@ -176,10 +176,15 @@ int open (const char *file)
 void close (int fd)
 {
   struct file* target_file;
-  target_file = thread_current()->file_descriptor[fd];
-  if(target_file == NULL) {
+
+  if (!(fd >= 2 && fd < 128))
     exit(-1);
-  } else {
-    target_file = NULL;
-  }
+
+  target_file = thread_current()->file_descriptor[fd];
+
+  if (target_file == NULL) {
+    exit(-1);
+  } 
+  
+  target_file = NULL;
 }
