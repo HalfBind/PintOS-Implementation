@@ -71,6 +71,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     {
       char *file = *(char **) get_argument(f->esp, 1);
       f->eax = open(file);
+      break;
     }
 
     case SYS_CLOSE:
@@ -128,7 +129,23 @@ bool create (const char *file, unsigned initial_size)
 
 int open (const char *file)
 {
-  filesys_open(file);
+ struct file * cur_file;
+ int ret = -1;
+ int i; 
+ cur_file = filesys_open(file);
+ if(cur_file == NULL) {
+    return -1;
+ } else {
+  for(i=3; i<128; i++) {
+    if(thread_current()->file_descriptor[i] == NULL) {
+      thread_current()->file_descriptor[i] = cur_file;
+      ret = i;
+      break;
+    }
+  }
+ }
+ return ret;
+
 }
 
 void close (int fd)
