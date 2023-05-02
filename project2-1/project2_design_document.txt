@@ -8,8 +8,8 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Gibeom Lim <kb28@unist.ac.kr>
+Jinsu Kim <sis3141@unist.ac.kr>
 
 ---- PRELIMINARIES ----
 
@@ -29,19 +29,45 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/* used for check debug option. if it's true, "printf" and "hexdump" functions are executed. */
+static bool DEBUG;
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
 
+When command line is accepted, store this into variable. 
+And split it with deliminiter " " (space), save as array of file name and arguments. (argv[])
+While parsing command line, count number of arguments. (argc)
+and then, iterate the member of argv, from last one, store "char" values in stack
+by subtracting size of "argv[i]" from stack pointer(esp).
+Also while doing this, store the address of each argument's first charactor. (argv_addrs[])
+Then, the value of arguments are stored in a right order. 
+And then, align the stack space by insert padding and null address to argv[argc].
+Next, store each argument's address from argv[argc - 1] to argv[0] by subtracting 
+size of char*'s pointer from stack pointer like previous step.
+Finally, insert address of argv[], argc, and return address. Then all of argument parsing is done.
+
+Also we implemented argument passing to have maximum limit of the number of arguments
+to avoid stack overflow. 
+
 ---- RATIONALE ----
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+According to implementation of strtok(), it use "static" variable so it is
+stored in data section. It can cause vulnerability because it can be accessed
+at anywhere so it can changed by other thread. Otherwise, strtok_r is safe because
+it does not use global variables.
+
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+First, it makes handling security easier because the separating occurs on user side.
+Second, it enhances efficiency of OS because it reduces workload of kernal.
 
                  SYSTEM CALLS
                  ============
@@ -52,9 +78,18 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+In struct thread,  file descriptor added which is table of file and it's size
+depends on pintos' limitaion on number of opened files per process.
+
+ + struct file* file_descriptor[128];
+
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+
+File descriptors are associated with opend files' information(struct file) 
+of each process providing index number of them.
+And as mentioned right above, they are unique within each single process.
 
 ---- ALGORITHMS ----
 
