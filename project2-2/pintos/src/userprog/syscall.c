@@ -50,7 +50,22 @@ syscall_handler (struct intr_frame *f UNUSED)
       exit(status);
       break;
     }
+    case SYS_READ : 
+    {
+      int fd = *((int *) get_argument(f->esp, 5));
+      // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
 
+      uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
+      validate_user_vaddr(buffer_ptr);
+
+      void *buffer = *buffer_ptr;
+      unsigned size = *((unsigned *) get_argument(f->esp, 7));
+
+      //todo implement
+
+      break;
+
+    }
     case SYS_WRITE:
     {
       int fd = *((int *) get_argument(f->esp, 5));
@@ -123,7 +138,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       break;
     }
-    
+
     case SYS_REMOVE : 
     {
       char* file_name = *((char **) get_argument(f->esp, 1));
