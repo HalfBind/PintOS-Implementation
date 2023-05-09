@@ -6,6 +6,8 @@
 #include "threads/vaddr.h"
 #include "console.h"
 #include "filesys/filesys.h"
+#include "filesys/file.h"
+#include "user/syscall.h"
 #define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
@@ -14,6 +16,7 @@ int open (const char *);
 
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
+struct file* get_file_with_fd(int fd);
 
 void
 syscall_init (void) 
@@ -104,6 +107,76 @@ syscall_handler (struct intr_frame *f UNUSED)
        break;
     }
 
+    case SYS_EXEC : 
+    {
+      char* cmd_line = *((char **) get_argument(f->esp,1));
+      //todo : implement
+
+      break;
+    }
+
+    case SYS_WAIT : 
+    {
+      pid_t pid = *((pid_t *) get_argument(f->esp,1));
+
+      //todo : implement
+
+      break;
+    }
+    
+    case SYS_REMOVE : 
+    {
+      char* file_name = *((char **) get_argument(f->esp, 1));
+      return filesys_remove(file_name);
+      break;
+      
+    }
+
+    case SYS_FILESIZE : 
+    {
+      struct file* target_file;
+      int fd = get_argument(f->esp, 1);
+      target_file = thread_current()->file_descriptor[fd];
+      if (target_file == NULL) {
+        exit(-1);
+      } else {
+        return (int)file_length(target_file);
+      }
+      break;
+    }
+
+    case SYS_SEEK : 
+    {
+      struct file* target_file;
+
+      int fd = *((int*) get_argument(f->esp, 4));
+      unsigned position = *((unsigned*) get_argument(f->esp, 5));
+
+      target_file = thread_current()->file_descriptor[fd];
+      if (target_file == NULL) {
+        exit(-1);
+      } else {
+        file_seek(target_file, position);
+      }
+      break;
+    }
+
+    case SYS_TELL : 
+    {
+      struct file* target_file;
+
+      int fd = *((int*) get_argument(f->esp, 1));
+
+      target_file = thread_current()->file_descriptor[fd];
+      if(target_file == NULL) {
+        exit(-1);
+      } else {
+        return (unsigned)file_tell(target_file);
+      }
+      break;
+
+    }
+
     default:
     {
       printf("Invalid system call number: %d\n", syscall_num);
@@ -188,3 +261,5 @@ void close (int fd)
   
   target_file = NULL;
 }
+
+
