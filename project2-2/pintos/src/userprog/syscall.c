@@ -9,6 +9,8 @@
 #include "filesys/file.h"
 #include "user/syscall.h"
 #include "userprog/process.h"
+#include "threads/synch.h"
+
 #define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
@@ -18,10 +20,12 @@ int open (const char *);
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
 struct file* get_file_with_fd(int fd);
+struct lock file_lock;
 
 void
 syscall_init (void) 
 {
+  lock_init(&file_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -54,13 +58,40 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_READ : 
     {
       int fd = *((int *) get_argument(f->esp, 5));
+      if (!(fd >= 0 && fd < 128))
+       exit(-1);
+      int i = 0, read_size = 0;
+      struct file * target_file;
       // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
 
       uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
-      validate_user_vaddr(buffer_ptr);
-
       void *buffer = *buffer_ptr;
+      validate_user_vaddr(buffer);
+      lock_acquire(&file_lock);
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
+      if(fd == 0) {
+        for(i = 0; i< size; i++ ) {
+          if(input_getc() == '/0') {
+            break;
+          }
+          read_size++;
+        }
+      } else if (fd > 1) {
+        target_file = thread_current()->file_descriptor[fd];
+        if(target_file == NULL) {
+          lock_release(&file_lock);
+          exit(-1);
+        } else {
+          read_size = file_read(target_file, buffer, size);
+        }
+
+      }
+
+      lock_release(&file_lock);
+      f->eax = (int)read_size;
+
+
+      
 
       //todo implement
 
@@ -70,15 +101,34 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_WRITE:
     {
       int fd = *((int *) get_argument(f->esp, 5));
+      if (!(fd >= 1 && fd < 128))
+       exit(-1);
+      
+      int i=0, write_size = 0;
+      struct file* target_file;
       // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
-
       uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
-      validate_user_vaddr(buffer_ptr);
-
       void *buffer = *buffer_ptr;
+      // void *buffer = (uint32_t *) get_argument(f->esp, 6);
+      validate_user_vaddr(buffer);
+      lock_acquire(&file_lock);
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
 
-      f->eax = write(fd, buffer, size);
+      if (fd == 1) { 
+        putbuf(buffer, size);
+        write_size =  size;
+      } else {
+        target_file = thread_current()->file_descriptor[fd];
+        if(target_file == NULL) {
+          lock_release(&file_lock);
+          exit(-1);
+        } else {
+          write_size = file_write(target_file, buffer, size);
+        }
+      }
+
+      lock_release(&file_lock);
+      f->eax = (int)write_size;
       break;
     }
 
@@ -101,17 +151,38 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_OPEN:
     {
-      char **file_address = get_argument(f->esp, 1);
-      validate_user_vaddr(*file_address);
-      char *file = *file_address;
+      char *file = *(char **)get_argument(f->esp, 1);
+      validate_user_vaddr(file);
+      lock_acquire(&file_lock);
 
-      if (file == NULL)
+      struct file * cur_file;
+      int  i = 0, ret_fd = -1; 
+
+      if (file == NULL) {
+        lock_release(&file_lock);
         exit(-1);
+      }
 
-      // validate_user_vaddr(file);
+      cur_file = filesys_open(file);
+      if (cur_file == NULL) {
+        ret_fd =  -1;
+      } else {
+        for (i = 3; i < 128; i++) {
+          if (thread_current()->file_descriptor[i] == NULL) {
+            thread_current()->file_descriptor[i] = cur_file;
+            ret_fd= i;
+            break;
+          }
+        }
+        if(ret_fd == -1) {
+          lock_release(&file_lock);
+          exit(-1); // file descriptor is full
+        }
 
-      int fd = open(file);
-      f->eax = fd;
+      }
+  
+      lock_release(&file_lock);
+      f->eax = ret_fd;
 
       break;
     }
@@ -143,7 +214,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_REMOVE : 
     {
       char* file_name = *((char **) get_argument(f->esp, 1));
-      return filesys_remove(file_name);
+      f->eax = filesys_remove(file_name);
       break;
       
     }
@@ -151,13 +222,13 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_FILESIZE : 
     {
       struct file* target_file;
-      int fd = get_argument(f->esp, 1);
+      int fd = *((int*) get_argument(f->esp, 1));
       target_file = thread_current()->file_descriptor[fd];
+
       if (target_file == NULL) {
         exit(-1);
-      } else {
-        return (int)file_length(target_file);
-      }
+      } 
+      f->eax = (int)file_length(target_file);
       break;
     }
 
@@ -186,10 +257,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       target_file = thread_current()->file_descriptor[fd];
       if(target_file == NULL) {
         exit(-1);
-      } else {
-        return (unsigned)file_tell(target_file);
-      }
-      break;
+      } 
+      f->eax = (unsigned)file_tell(target_file);
+      break;  
 
     }
 
@@ -231,45 +301,16 @@ void exit (int status)
   thread_exit ();
 }
 
-int write (int fd, const void *buffer, unsigned size)
-{
-  if (fd == 1)
-  {
-    putbuf(buffer, size);
-    return size;
-  }
-}
-
 bool create (const char *file, unsigned initial_size)
 {
   return filesys_create(file, initial_size);
 }
 
-int open (const char *file)
-{
-  struct file * cur_file;
-  int i; 
-  cur_file = filesys_open(file);
-  if (cur_file == NULL) {
-    return -1;
-  }
-  for (i = 3; i < 128; i++) {
-    if (thread_current()->file_descriptor[i] == NULL) 
-    {
-      thread_current()->file_descriptor[i] = cur_file;
-      return i;
-    }
-  }
-  exit(-1); // file descriptor is full
-}
-
 void close (int fd)
 {
   struct file* target_file;
-
-  if (!(fd >= 2 && fd < 128))
+    if (!(fd >= 2 && fd < 128))
     exit(-1);
-
   target_file = thread_current()->file_descriptor[fd];
 
   if (target_file == NULL) {
