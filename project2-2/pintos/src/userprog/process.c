@@ -183,11 +183,16 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  struct thread *child_thread = get_thread(child_tid);
+  struct thread *child_thread = get_child_thread(thread_current(), child_tid);
+
+  if (child_thread == NULL)
+  {
+    return -1;
+  }
 
   sema_down(&child_thread->is_terminated);
 
-  return -1;
+  return thread_current()->exit_status;
 }
 
 /* Free the current process's resources. */

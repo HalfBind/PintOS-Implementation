@@ -97,6 +97,7 @@ struct thread
     struct list_elem elem;              /* List element. */
 
    /* project 2 - wait system call */
+   struct thread *parent_thread;   /* parent thread */
    struct list child_list;         /* store child threads */
    struct list_elem child_elem;    /* list elem for child_list */
    struct semaphore is_terminated; /* semaphore indicates thread termination  */
@@ -148,5 +149,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 struct thread *get_thread(tid_t);
+struct thread *get_child_thread(struct thread *, tid_t);
+struct thread *find_thread_in_list(struct list *, tid_t);
 
 #endif /* threads/thread.h */
