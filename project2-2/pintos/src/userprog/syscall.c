@@ -16,7 +16,7 @@
 static void syscall_handler (struct intr_frame *);
 bool create (const char *, unsigned );
 int open (const char *);
-
+pid_t syscall_exec (char *cmd_line);
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
 struct file* get_file_with_fd(int fd);
@@ -55,7 +55,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       exit(status);
       break;
     }
-    case SYS_READ : 
+    case SYS_READ:
     {
       int fd = *((int *) get_argument(f->esp, 5));
       if (!(fd >= 0 && fd < 128))
@@ -194,15 +194,15 @@ syscall_handler (struct intr_frame *f UNUSED)
        break;
     }
 
-    case SYS_EXEC : 
+    case SYS_EXEC: 
     {
-      char* cmd_line = *((char **) get_argument(f->esp,1));
-      //todo : implement
+      char* cmd_line = *((char **) get_argument(f->esp, 1));
+      f->eax = syscall_exec (cmd_line);
 
       break;
     }
 
-    case SYS_WAIT : 
+    case SYS_WAIT: 
     {
       pid_t pid = *((pid_t *) get_argument(f->esp,1));
 
@@ -211,7 +211,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     }
 
-    case SYS_REMOVE : 
+    case SYS_REMOVE:
     {
       char* file_name = *((char **) get_argument(f->esp, 1));
       f->eax = filesys_remove(file_name);
@@ -219,7 +219,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       
     }
 
-    case SYS_FILESIZE : 
+    case SYS_FILESIZE:
     {
       struct file* target_file;
       int fd = *((int*) get_argument(f->esp, 1));
@@ -232,7 +232,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     }
 
-    case SYS_SEEK : 
+    case SYS_SEEK:
     {
       struct file* target_file;
 
@@ -248,7 +248,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     }
 
-    case SYS_TELL : 
+    case SYS_TELL:
     {
       struct file* target_file;
 
@@ -323,4 +323,9 @@ void close (int fd)
 int wait (pid_t pid)
 {
   return process_wait(pid);
+}
+
+pid_t syscall_exec (char *cmd_line)
+{
+  return (tid_t) process_execute (cmd_line);
 }
