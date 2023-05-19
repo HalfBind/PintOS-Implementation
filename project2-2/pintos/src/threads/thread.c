@@ -283,6 +283,14 @@ thread_tid (void)
   return thread_current ()->tid;
 }
 
+/* Set the exit status */
+void 
+set_exit_thread (int status)
+{
+  running_thread()->parent_thread->exit_status = status;
+}
+
+
 /* Deschedules the current thread and destroys it.  Never
    returns to the caller. */
 void
@@ -292,7 +300,7 @@ thread_exit (void)
 
 #ifdef USERPROG
   int i;
-  for(i=0;i<128;i++) {
+  for(i = 0; i < 128; i++) {
     thread_current()->file_descriptor[i] = NULL;
   }
   process_exit ();
@@ -304,6 +312,7 @@ thread_exit (void)
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
+  sema_up(&running_thread()->is_terminated);
   schedule ();
   NOT_REACHED ();
 }
@@ -467,16 +476,22 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
 
+  struct thread *parent_thread = running_thread ();
+
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
+  sema_init(&t->is_terminated, 0);
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->parent_thread = parent_thread;
+  list_init(&t->child_list);
   list_push_back (&all_list, &t->allelem);
+  list_push_back (&parent_thread->child_list, &t->child_elem);
   #ifdef USERPROG
     int i;
-    for(i=0;i<128;i++) {
+    for (i = 0; i < 128; i++) {
       t->file_descriptor[i] = NULL;
     }
   #endif
@@ -610,5 +625,35 @@ struct thread *get_thread(tid_t thread_id)
       return cur;
   }
   return NULL;
+}
 
+// find child thread by tid
+struct thread *get_child_thread(struct thread *parent_thread, tid_t thread_id)
+{
+  struct list_elem *el;
+  for (el = list_begin(&parent_thread->child_list); 
+      el != list_tail(&parent_thread->child_list);
+      el = list_next(el))
+  {
+    struct thread *cur = list_entry(el, struct thread, child_elem);
+    if (cur->tid == thread_id)
+      return cur;
+  }
+  return NULL;
+}
+
+
+// find thread in list by tid
+struct thread *find_thread_in_list(struct list *list, tid_t thread_id)
+{
+  struct list_elem *el;
+  for (el = list_begin(&list); 
+      el != list_tail(&list);
+      el = list_next(el))
+  {
+    struct thread *cur = list_entry(el, struct thread, elem);
+    if (cur->tid == thread_id)
+      return cur;
+  }
+  return NULL;
 }

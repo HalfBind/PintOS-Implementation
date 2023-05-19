@@ -8,7 +8,9 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "user/syscall.h"
+#include "userprog/process.h"
 #include "threads/synch.h"
+
 #define DEBUG false // TODO make 'DEBUG's 1 value
 
 static void syscall_handler (struct intr_frame *);
@@ -204,7 +206,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     {
       pid_t pid = *((pid_t *) get_argument(f->esp,1));
 
-      //todo : implement
+      f->eax = wait(pid);
 
       break;
     }
@@ -295,7 +297,8 @@ void exit (int status)
     printf("exit program. status: %d\n", status);
   printf("%s: exit(%d)\n", thread_name(), status);
 
-  thread_exit();
+  set_exit_thread (status);
+  thread_exit ();
 }
 
 bool create (const char *file, unsigned initial_size)
@@ -317,4 +320,7 @@ void close (int fd)
   target_file = NULL;
 }
 
-
+int wait (pid_t pid)
+{
+  return process_wait(pid);
+}
