@@ -304,6 +304,7 @@ thread_exit (void)
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
+  sema_up(&running_thread()->is_terminated);
   schedule ();
   NOT_REACHED ();
 }
@@ -467,16 +468,21 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
 
+  struct thread *parent_thread = running_thread ();
+
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
+  sema_init(&t->is_terminated, 0);
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  list_init(&t->child_list);
   list_push_back (&all_list, &t->allelem);
+  list_push_back (&parent_thread->child_list, &t->child_elem);
   #ifdef USERPROG
     int i;
-    for(i=0;i<128;i++) {
+    for (i = 0; i < 128; i++) {
       t->file_descriptor[i] = NULL;
     }
   #endif

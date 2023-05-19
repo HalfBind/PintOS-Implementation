@@ -183,14 +183,10 @@ start_process (void *command_line)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // tmp loop for test
+  struct thread *child_thread = get_thread(child_tid);
 
-    // while(1) {}
-  
-  int i = 0;
-  while(i < 5000000) {
-    i++;
-  }
+  sema_down(&child_thread->is_terminated);
+
   return -1;
 }
 
