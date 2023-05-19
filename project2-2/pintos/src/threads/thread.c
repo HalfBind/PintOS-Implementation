@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "filesys/file.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -301,6 +302,7 @@ thread_exit (void)
 #ifdef USERPROG
   int i;
   for(i = 0; i < 128; i++) {
+    file_close(thread_current()->file_descriptor[i]);
     thread_current()->file_descriptor[i] = NULL;
   }
   process_exit ();

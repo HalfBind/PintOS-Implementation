@@ -169,6 +169,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       } else {
         for (i = 3; i < 128; i++) {
           if (thread_current()->file_descriptor[i] == NULL) {
+            if(strcmp(thread_current()-> name, file)== 0) {
+              file_deny_write(cur_file);
+            }
             thread_current()->file_descriptor[i] = cur_file;
             ret_fd= i;
             break;
