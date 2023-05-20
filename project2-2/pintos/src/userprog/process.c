@@ -30,21 +30,25 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name)
 {
-  char *fn_copy;
+  char *fn_copy, *cmd_line;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
+  cmd_line = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (cmd_line, file_name, PGSIZE);
 
   char *save_ptr;
-  file_name = strtok_r(file_name, " ", &save_ptr);
+  char *prg_name = strtok_r(cmd_line, " ", &save_ptr);
+  if (filesys_open(prg_name) == NULL)
+    return -1;
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (prg_name, PRI_DEFAULT, start_process, fn_copy);
 
   if (DEBUG)
     printf("✅thread created\n");
