@@ -78,8 +78,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       } else if (fd > 1) {
         target_file = thread_current()->file_descriptor[fd];
         if (target_file == NULL) {
-          lock_release(&file_lock);
-          exit(-1);
+          read_size = -1;
         } else {
           read_size = file_read(target_file, buffer, size);
         }
@@ -87,12 +86,6 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       lock_release(&file_lock);
       f->eax = (int)read_size;
-
-
-      
-
-      //todo implement
-
       break;
 
     }
@@ -119,7 +112,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         target_file = thread_current()->file_descriptor[fd];
         if(target_file == NULL) {
           lock_release(&file_lock);
-          exit(-1);
+          write_size = -1;
         } else {
           write_size = file_write(target_file, buffer, size);
         }
@@ -176,8 +169,10 @@ syscall_handler (struct intr_frame *f UNUSED)
           }
         }
         if(ret_fd == -1) {
+          // printf('::// ret_fd is -1');
+          file_close(cur_file);
           lock_release(&file_lock);
-          exit(-1); // file descriptor is full
+          // exit(-1); // file descriptor is full
         }
 
       }
