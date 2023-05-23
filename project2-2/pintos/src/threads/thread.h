@@ -101,7 +101,10 @@ struct thread
    struct list child_list;         /* store child threads */
    struct list_elem child_elem;    /* list elem for child_list */
    struct semaphore is_terminated; /* semaphore indicates thread termination  */
+   struct semaphore is_loaded;
+   struct semaphore is_exited;
    int exit_status;                /* exit status */
+   bool load_status;                /* load status */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

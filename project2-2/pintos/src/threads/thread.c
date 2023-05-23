@@ -288,7 +288,7 @@ thread_tid (void)
 void 
 set_exit_thread (int status)
 {
-  running_thread()->parent_thread->exit_status = status;
+  running_thread()->exit_status = status;
 }
 
 
@@ -311,11 +311,11 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+  sema_up(&running_thread()->is_terminated);
+  sema_down(&running_thread()->is_exited);
   intr_disable ();
   list_remove (&thread_current()->allelem);
-  list_remove (&thread_current()->child_elem);
   thread_current ()->status = THREAD_DYING;
-  sema_up(&running_thread()->is_terminated);
   schedule ();
   NOT_REACHED ();
 }
@@ -484,6 +484,8 @@ init_thread (struct thread *t, const char *name, int priority)
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   sema_init(&t->is_terminated, 0);
+  sema_init(&t->is_exited, 0);
+  sema_init(&t->is_loaded, 0);
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
