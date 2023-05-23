@@ -43,12 +43,12 @@ process_execute (const char *file_name)
   strlcpy (cmd_line, file_name, PGSIZE);
 
   char *save_ptr;
-  char *prg_name = strtok_r(cmd_line, " ", &save_ptr);
-  if (filesys_open(prg_name) == NULL)
+  char *program_name = strtok_r(cmd_line, " ", &save_ptr);
+  if (filesys_open(program_name) == NULL)
     return -1;
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (prg_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
 
   if (DEBUG)
     printf("✅thread created\n");
