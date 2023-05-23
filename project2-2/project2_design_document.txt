@@ -123,7 +123,13 @@ The number of bytes written is stored in write_size and returned.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
-
+- case of full page
+    - Greatest: 2
+    - Least: 1
+    
+- case of 2 bytes
+    - Greatest: 2
+    - Least: 1
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
