@@ -44,11 +44,22 @@ process_execute (const char *file_name)
 
   char *save_ptr;
   char *program_name = strtok_r(cmd_line, " ", &save_ptr);
-  if (filesys_open(program_name) == NULL)
+  if (filesys_open(program_name) == NULL) {
+    palloc_free_page(fn_copy);
+    palloc_free_page(cmd_line);
     return -1;
+  }
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
+
+  if (DEBUG)
+    printf("✅thread created\n");
+  if (tid == TID_ERROR)
+    palloc_free_page (fn_copy);
+  if (DEBUG)
+    printf("✅page alloc freed\n"); 
+  
   struct thread *cur = thread_current();
 
   struct thread *child_thread = get_child_thread(cur, tid);
@@ -60,12 +71,7 @@ process_execute (const char *file_name)
     }
   }
 
-  if (DEBUG)
-    printf("✅thread created\n");
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy);
-  if (DEBUG)
-    printf("✅page alloc freed\n"); 
+  palloc_free_page (cmd_line);
 
   return tid;
 }

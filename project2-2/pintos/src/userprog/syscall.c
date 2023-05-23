@@ -111,7 +111,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       } else {
         target_file = thread_current()->file_descriptor[fd];
         if(target_file == NULL) {
-          lock_release(&file_lock);
           write_size = -1;
         } else {
           write_size = file_write(target_file, buffer, size);
@@ -171,7 +170,6 @@ syscall_handler (struct intr_frame *f UNUSED)
         if(ret_fd == -1) {
           // printf('::// ret_fd is -1');
           file_close(cur_file);
-          lock_release(&file_lock);
           // exit(-1); // file descriptor is full
         }
 
