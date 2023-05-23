@@ -78,10 +78,16 @@ Second, it enhances efficiency of OS because it reduces workload of kernal.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-In struct thread,  file descriptor added which is table of file and it's size
-depends on pintos' limitaion on number of opened files per process.
 
- + struct file* file_descriptor[128];
+   /* project 2 - wait system call */
+   struct thread *parent_thread;   /* parent thread */
+   struct list child_list;         /* store child threads */
+   struct list_elem child_elem;    /* list elem for child_list */
+   struct semaphore is_terminated; /* semaphore indicates thread termination  */
+   struct semaphore is_loaded;
+   struct semaphore is_exited;
+   int exit_status;                /* exit status */
+   bool load_status;                /* load status */
 
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
@@ -93,8 +99,22 @@ And as mentioned right above, they are unique within each single process.
 
 ---- ALGORITHMS ----
 
+
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+
+- reading
+It checks if the file descriptor is valid. And retrieves the buffer pointer and validates it.
+If the file descriptor is 0 (standard input), it reads characters from input until the specified size or null character is encountered.
+If the file descriptor is greater than 1 (file), it retrieves the file associated with the descriptor and reads from it into the buffer.
+The number of bytes read is stored in read_size and returned.
+
+- writing
+It checks if the file descriptor is valid. And then retrieves the buffer pointer and validates it.
+If the file descriptor is 1 (standard output), it writes the buffer contents to the console using putbuf().
+If the file descriptor is greater than 1 (file), it retrieves the file associated with the descriptor and writes from the buffer to the file.
+The number of bytes written is stored in write_size and returned.
+
 
 >> B4: Suppose a system call causes a full page (4,096 bytes) of data
 >> to be copied from user space into the kernel.  What is the least
@@ -103,8 +123,21 @@ And as mentioned right above, they are unique within each single process.
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
 
+
+
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+In my implementation of wait system call, 
+First, find child thread from current thread. (Especially, check whether 
+the target thread id are exist in child_list)
+If child are not exist, return -1. 
+And then, check waiters of child's sema that indicates terminated for 
+prevent duplicated wait. If that case, return -1.
+Finally, wait for child's exit by holding semaphore which name is "is_terminated".
+If thread_exit() called at child thread, that semaphore are released.
+then return the exit status.
+
 
 >> B6: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -120,12 +153,21 @@ And as mentioned right above, they are unique within each single process.
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
+First of all, we implemented and used a customized function that 
+validates the address to handle errors without obscuring the main 
+functions of the code. This allows error processing by separating 
+it from the logic of the main function.
+
+
 ---- SYNCHRONIZATION ----
 
 >> B7: The "exec" system call returns -1 if loading the new executable
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
+
+In our implementation, if load fails and "exec" system call return -1 and
+convey the status to caller thread by set status in "eax" register.
 
 >> B8: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -134,16 +176,35 @@ And as mentioned right above, they are unique within each single process.
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
 
+First, we implemented child and parent by adding child_list member, so that 
+every thread are aware of each child threads. So, they are can be checked 
+whether they are parent-child relation.
+And we implemented "wait" system call by using semaphore, so that prevent 
+race condition. 
+
 ---- RATIONALE ----
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
 
+We take a strategy that apply validity checking logic to user memory address.
+In our implementation, we check first the user address are valid (exist in a 
+correct range of user memory space) and if invalid, exit thread.
+By using this method, kernel can access user memory safely.
+
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
 
+Since the capacity is implemented as a fixed array, 
+there is a disadvantage in that it occupies a fixed capacity of 128. 
+However, in the case of implementing this method, 
+it has the advantage of taking faster time to refer to each file descriptor 
+than the method of implementing it with a linked list.
+
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+
+We didn't change that.
 
                SURVEY QUESTIONS
                ================
