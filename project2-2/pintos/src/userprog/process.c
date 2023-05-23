@@ -194,6 +194,16 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
+  struct list_elem *el;
+  for (el = list_begin(&child_thread->is_terminated.waiters); 
+      el != list_tail(&child_thread->is_terminated.waiters);
+      el = list_next(el))
+  {
+    struct thread *cur = list_entry(el, struct thread, child_elem);
+    if (cur->tid == thread_current ()->tid)
+      return -1;
+  }
+
   sema_down(&child_thread->is_terminated);
 
   return thread_current()->exit_status;
