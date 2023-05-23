@@ -16,7 +16,7 @@
 static void syscall_handler (struct intr_frame *);
 bool create (const char *, unsigned );
 int open (const char *);
-pid_t syscall_exec (char *cmd_line);
+pid_t execute (char *cmd_line);
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
 struct file* get_file_with_fd(int fd);
@@ -200,7 +200,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_EXEC: 
     {
       char* cmd_line = *((char **) get_argument(f->esp, 1));
-      f->eax = syscall_exec (cmd_line);
+      f->eax = execute (cmd_line);
 
       break;
     }
@@ -328,7 +328,7 @@ int wait (pid_t pid)
   return process_wait(pid);
 }
 
-pid_t syscall_exec (char *cmd_line)
+pid_t execute (char *cmd_line)
 {
   return (tid_t) process_execute (cmd_line);
 }
