@@ -30,21 +30,25 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name)
 {
-  char *fn_copy;
+  char *fn_copy, *cmd_line;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
+  cmd_line = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (cmd_line, file_name, PGSIZE);
 
   char *save_ptr;
-  file_name = strtok_r(file_name, " ", &save_ptr);
+  char *program_name = strtok_r(cmd_line, " ", &save_ptr);
+  if (filesys_open(program_name) == NULL)
+    return -1;
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
 
   if (DEBUG)
     printf("✅thread created\n");
@@ -188,6 +192,16 @@ process_wait (tid_t child_tid UNUSED)
   if (child_thread == NULL)
   {
     return -1;
+  }
+
+  struct list_elem *el;
+  for (el = list_begin(&child_thread->is_terminated.waiters); 
+      el != list_tail(&child_thread->is_terminated.waiters);
+      el = list_next(el))
+  {
+    struct thread *cur = list_entry(el, struct thread, child_elem);
+    if (cur->tid == thread_current ()->tid)
+      return -1;
   }
 
   sema_down(&child_thread->is_terminated);

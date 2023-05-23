@@ -16,7 +16,7 @@
 static void syscall_handler (struct intr_frame *);
 bool create (const char *, unsigned );
 int open (const char *);
-pid_t syscall_exec (char *cmd_line);
+pid_t execute (char *cmd_line);
 bool create (const char *file, unsigned initial_size);
 int open(const char *file);
 struct file* get_file_with_fd(int fd);
@@ -62,29 +62,27 @@ syscall_handler (struct intr_frame *f UNUSED)
        exit(-1);
       int i = 0, read_size = 0;
       struct file * target_file;
-      // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
 
       uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
       void *buffer = *buffer_ptr;
       validate_user_vaddr(buffer);
       lock_acquire(&file_lock);
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
-      if(fd == 0) {
-        for(i = 0; i< size; i++ ) {
-          if(input_getc() == '/0') {
+      if (fd == 0) {
+        for (i = 0; i < size; i++) {
+          if (input_getc () == '/0') {
             break;
           }
           read_size++;
         }
       } else if (fd > 1) {
         target_file = thread_current()->file_descriptor[fd];
-        if(target_file == NULL) {
+        if (target_file == NULL) {
           lock_release(&file_lock);
           exit(-1);
         } else {
           read_size = file_read(target_file, buffer, size);
         }
-
       }
 
       lock_release(&file_lock);
@@ -104,12 +102,12 @@ syscall_handler (struct intr_frame *f UNUSED)
       if (!(fd >= 1 && fd < 128))
        exit(-1);
       
-      int i=0, write_size = 0;
+      int i = 0, write_size = 0;
       struct file* target_file;
-      // void ** buffer_pointer = *(void ***) get_argument(f->esp, 6);
+
       uint32_t *buffer_ptr = (uint32_t *) get_argument(f->esp, 6);
       void *buffer = *buffer_ptr;
-      // void *buffer = (uint32_t *) get_argument(f->esp, 6);
+
       validate_user_vaddr(buffer);
       lock_acquire(&file_lock);
       unsigned size = *((unsigned *) get_argument(f->esp, 7));
@@ -200,14 +198,14 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_EXEC: 
     {
       char* cmd_line = *((char **) get_argument(f->esp, 1));
-      f->eax = syscall_exec (cmd_line);
+      f->eax = execute (cmd_line);
 
       break;
     }
 
     case SYS_WAIT: 
     {
-      pid_t pid = *((pid_t *) get_argument(f->esp,1));
+      pid_t pid = *((pid_t *) get_argument(f->esp, 1));
 
       f->eax = wait(pid);
 
@@ -328,7 +326,7 @@ int wait (pid_t pid)
   return process_wait(pid);
 }
 
-pid_t syscall_exec (char *cmd_line)
+pid_t execute (char *cmd_line)
 {
   return (tid_t) process_execute (cmd_line);
 }
