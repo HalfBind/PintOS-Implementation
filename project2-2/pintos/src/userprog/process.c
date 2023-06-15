@@ -30,23 +30,28 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name)
 {
-  char *fn_copy, *cmd_line;
+  char *fn_copy;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
-  cmd_line = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  strlcpy (cmd_line, file_name, PGSIZE);
+  char program_name[64];
+  int i;
+
+  while (fn_copy[i] != '\0' && fn_copy[i] != ' ') {
+    program_name[i] = fn_copy[i];
+    i++;
+  }
+
+  program_name[i] = '\0';
 
   char *save_ptr;
-  char *program_name = strtok_r(cmd_line, " ", &save_ptr);
   if (filesys_open(program_name) == NULL) {
     palloc_free_page(fn_copy);
-    palloc_free_page(cmd_line);
     return -1;
   }
 
@@ -71,8 +76,6 @@ process_execute (const char *file_name)
     }
   }
 
-  palloc_free_page (cmd_line);
-
   return tid;
 }
 
@@ -82,7 +85,17 @@ static void
 start_process (void *command_line)
 {
   char *cmd_line_copy = command_line;
-  char *token, *save_ptr, *file_name;
+  char *token, *save_ptr;
+  char file_name[64];
+  int i;
+
+  while (cmd_line_copy[i] != '\0' && cmd_line_copy[i] != ' ') {
+    file_name[i] = cmd_line_copy[i];
+    i++;
+  }
+
+  file_name[i] = '\0';
+
   int argc = 0;
   char *argv[64]; // store argument's pointer
   for (token = strtok_r (cmd_line_copy, " ", &save_ptr); token != NULL;
@@ -91,9 +104,6 @@ start_process (void *command_line)
     argv[argc] = token;
     argc++;
   }
-
-  file_name = argv[0];
-
   struct intr_frame if_;
   bool success;
 
@@ -180,7 +190,10 @@ start_process (void *command_line)
   }
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
+
+  palloc_free_page(command_line);
+
+
   if (!success) 
     thread_exit ();
   /* Start the user process by simulating a return from an
