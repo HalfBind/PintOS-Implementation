@@ -292,6 +292,15 @@ void exit (int status)
   printf("%s: exit(%d)\n", thread_name(), status);
 
   set_exit_thread (status);
+  struct thread * check_thread = NULL;
+  struct list_elem * temp_elem = NULL;
+  for(temp_elem = list_begin(&thread_current()->child_list); 
+    temp_elem != list_end(&thread_current()->child_list); 
+    temp_elem = list_next(temp_elem)) 
+  {
+    check_thread = list_entry(temp_elem, struct thread, child_elem);
+    process_wait(check_thread->tid);
+  }
   thread_exit ();
 }
 

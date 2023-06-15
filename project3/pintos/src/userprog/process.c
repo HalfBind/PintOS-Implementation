@@ -67,7 +67,7 @@ process_execute (const char *file_name)
   
   struct thread *cur = thread_current();
 
-  struct thread *child_thread = get_child_thread(cur, tid);
+  struct thread *child_thread = get_child_thread( tid);
   if (child_thread != NULL) {
     sema_down(&cur->is_loaded);
     if (!child_thread->load_status){
@@ -115,7 +115,6 @@ start_process (void *command_line)
   
   success = load (file_name, &if_.eip, &if_.esp); // TODO error in this invoke
   struct thread *cur = thread_current();
-  sema_up(&cur->parent_thread-> is_loaded);
   cur->load_status = success;
   if (success) {
 
@@ -190,9 +189,8 @@ start_process (void *command_line)
   }
 
   /* If load failed, quit. */
-
   palloc_free_page(command_line);
-
+  sema_up(&cur->parent_thread-> is_loaded);
 
   if (!success) 
     thread_exit ();
@@ -215,30 +213,20 @@ start_process (void *command_line)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
+
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  struct thread *child_thread = get_child_thread(thread_current(), child_tid);
+  struct thread *child_thread = get_child_thread(child_tid);
 
   if (child_thread == NULL)
   {
     return -1;
   }
-
-  struct list_elem *el;
-  for (el = list_begin(&child_thread->is_terminated.waiters); 
-      el != list_tail(&child_thread->is_terminated.waiters);
-      el = list_next(el))
-  {
-    struct thread *cur = list_entry(el, struct thread, child_elem);
-    if (cur->tid == thread_current ()->tid)
-      return -1;
-  }
-
-  sema_down(&child_thread->is_terminated);
-  int exit_status = child_thread -> exit_status;
-  list_remove (&child_thread->child_elem);
-  sema_up(&child_thread->is_exited);
+    sema_down(&child_thread->is_terminated);
+    int exit_status = child_thread -> exit_status;
+    list_remove (&child_thread->child_elem);
+    sema_up(&child_thread->is_exited);
 
   return exit_status;
 }
@@ -266,6 +254,8 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  sema_up(&cur->is_terminated);
+  sema_down(&cur->is_exited);
 }
 
 /* Sets up the CPU for running user code in the current
